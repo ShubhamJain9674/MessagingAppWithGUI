@@ -37,6 +37,13 @@ std::string getLocalIP() {
 }
 
 
+
+
+void Server::log(const std::string& message, int level)
+{
+    Applog.push_back({ message, level });
+}
+
 void Server::StartServer() {
 
     /*WSADATA wsaData;

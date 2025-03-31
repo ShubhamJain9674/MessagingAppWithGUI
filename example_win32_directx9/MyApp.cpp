@@ -427,10 +427,25 @@ namespace MyApp {
     }
 
 
-    void Console() {
+    void Console(Server* MyServer) {
         if (ImGui::Begin("##Console")) {
 
             ImGui::BeginChild("Console",ImVec2(0,0),true,ImGuiWindowFlags_HorizontalScrollbar);
+            for (const auto& log : MyServer->Applog) {
+                // Set color based on log level
+                if (log.level == 0)
+                    ImGui::TextColored(ImVec4(1, 1, 1, 1), "[INFO] %s", log.message.c_str());
+                else if (log.level == 1)
+                    ImGui::TextColored(ImVec4(1, 1, 0, 1), "[WARNING] %s", log.message.c_str());
+                else
+                    ImGui::TextColored(ImVec4(1, 0, 0, 1), "[ERROR] %s", log.message.c_str());
+            }
+            if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+                ImGui::SetScrollHereY(1.0f); 
+            }
+
+
+
 
             ImGui::EndChild();
             ImGui::End();

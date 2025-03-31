@@ -9,6 +9,11 @@
 #include <chrono>
 #include <vector>
 
+struct Log {
+    std::string message;
+    int level{ 0 };
+};
+
 class Server {
 
 private:
@@ -23,7 +28,7 @@ private:
 
 public:
 
-    std::vector<std::string> Applog;
+    
     
     SOCKET acceptSocket;
     sockaddr_in ClientSocket;
@@ -40,6 +45,11 @@ public:
 
     SOCKET mySocket{ INVALID_SOCKET };
     std::atomic<bool> isClientConnected = false;
+
+    std::vector<Log> Applog;
+
+    //function to push message to log:-
+    void log(const std::string& message,int level);
 
     //Functions to start server:-
     void StartServer();
