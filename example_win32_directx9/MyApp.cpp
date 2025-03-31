@@ -252,24 +252,32 @@ namespace MyApp {
             }
             
         }
-        if (myServer->isClientConnected) {
-            myServer->connectionType = 2;
-            myServer->ConnectionStatus = true;
-            myServer->ConnectedDeviceIP = myServer->ClientIP;
-            //std::cout << "Connected successfully ";
-        }
+        else {
 
-        if (myServer->ConnectionStatus) {
+            if (myServer->isClientConnected) {
+                myServer->connectionType = 2;
+                myServer->ConnectionStatus = true;
+                myServer->ConnectedDeviceIP = myServer->ClientIP;
+                //std::cout << "Connected successfully ";
+            }
 
-            ImGui::SetCursorPos(ImVec2(10, 90));
-            ImGui::Text("Connected Device IP : ");
-            ImGui::SetCursorPos(ImVec2(10, 110));
+            if (myServer->ConnectionStatus) {
 
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), myServer->ConnectedDeviceIP.c_str());
+                ImGui::SetCursorPos(ImVec2(10, 90));
+                ImGui::Text("Connected Device IP : ");
+                ImGui::SetCursorPos(ImVec2(10, 110));
 
-            //myServer->SendMessageToOther(&myServer->mySocket);
+                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), myServer->ConnectedDeviceIP.c_str());
+
+                //myServer->SendMessageToOther(&myServer->mySocket);
 
 
+            }
+            else {
+                ImGui::SetCursorPos(ImVec2(50,50));
+                ImGui::Text("Waiting for Connections");
+
+            }
         }
         
         
@@ -419,7 +427,15 @@ namespace MyApp {
     }
 
 
+    void Console() {
+        if (ImGui::Begin("##Console")) {
 
+            ImGui::BeginChild("Console",ImVec2(0,0),true,ImGuiWindowFlags_HorizontalScrollbar);
+
+            ImGui::EndChild();
+            ImGui::End();
+        }
+    }
 
 
 }

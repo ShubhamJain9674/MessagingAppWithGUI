@@ -26,4 +26,5 @@ namespace MyApp {
     void TopBar(bool*,Server*);
     void GetIpWindow(char*,bool*,Server*);
     void MessageBoxWin(bool*, Server*,char*,char*);
+    void Console();
 }

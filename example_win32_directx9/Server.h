@@ -7,7 +7,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
-
+#include <vector>
 
 class Server {
 
@@ -22,6 +22,8 @@ private:
 
 
 public:
+
+    std::vector<std::string> Applog;
     
     SOCKET acceptSocket;
     sockaddr_in ClientSocket;

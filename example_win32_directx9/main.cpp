@@ -175,6 +175,7 @@ int main(int, char**)
 
         MyApp::TopBar(&IpWindow,&MyServer);
         MyApp::MessageBoxWin(&IpWindow, &MyServer,DataSendbuffer,DataReceiveBuffer);
+        MyApp::Console();
 
         if (IpWindow) {
             MyApp::GetIpWindow(IPBuffer,&IpWindow, &MyServer);
