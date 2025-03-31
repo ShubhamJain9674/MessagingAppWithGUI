@@ -53,7 +53,7 @@ public:
     bool ConnectServer(std::string IP);
     void ClientCleanup();
     bool SendMessageToOther(SOCKET* sock,char* message);
-    bool ReceiveMessageFromOther(SOCKET* sock, char* message);
+    bool ReceiveMessageFromOther(SOCKET* sock, char* message,bool* RecieveStatus);
     void StartAcceptingConnections();
 
 

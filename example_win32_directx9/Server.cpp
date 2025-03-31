@@ -337,39 +337,56 @@ bool Server::SendMessageToOther(SOCKET* sock ,char* message)
     return true;
 }
 
-bool Server::ReceiveMessageFromOther(SOCKET* sock, char* message) {
 
-    
-    char receiveBuffer[200] = { 0 };
-    int byteCount = recv((*sock), receiveBuffer, sizeof(receiveBuffer) - 1, 0);
-    std::cout << "check for if recv is blocking" << std::endl;
-    if (byteCount > 0) {
-        // Ensure null termination
-        receiveBuffer[byteCount] = '\0';
 
-        // Copy only if message is within bounds
-        if (byteCount < static_cast<int>(sizeof(receiveBuffer))) {
-            strcpy_s(message, 200, receiveBuffer);
-            std::cout << "Received message: " << receiveBuffer << std::endl;
-            return true;
+void startReceiving(SOCKET* sock, char* message,bool* status) {
+
+    while (true) {
+        char receiveBuffer[200] = { 0 };
+        int byteCount = recv((*sock), receiveBuffer, sizeof(receiveBuffer) - 1, 0);
+        std::cout << "check for if recv is blocking" << std::endl;
+        if (byteCount > 0) {
+            // Ensure null termination
+            receiveBuffer[byteCount] = '\0';
+
+            // Copy only if message is within bounds
+            if (byteCount < static_cast<int>(sizeof(receiveBuffer))) {
+                strcpy_s(message, 200, receiveBuffer);
+                std::cout << "Received message: " << receiveBuffer << std::endl;
+                 *status=true;
+            }
+            else {
+                std::cerr << "Message too long to handle." << std::endl;
+                *status=false;
+            }
+        }
+        else if (byteCount == 0) {
+            std::cout << "Client Disconnected!" << std::endl;
+            *status=false;
+            break;
         }
         else {
-            std::cerr << "Message too long to handle." << std::endl;
-            return false;
+            int err = WSAGetLastError();
+            if (err != WSAEWOULDBLOCK) {
+                printf("Receive error: %d\n", err);
+                *status=false;
+                break;
+            }
         }
-    }
-    else if (byteCount == 0) {
-        std::cout << "Client Disconnected!" << std::endl;
-        return false;
-    }
-    else {
-        int err = WSAGetLastError();
-        if (err != WSAEWOULDBLOCK) {
-            printf("Receive error: %d\n", err);
-            return false;
-        }
-    }
 
+        
+        Sleep(500);
+    }
+    
+}
+
+
+
+
+bool Server::ReceiveMessageFromOther(SOCKET* sock, char* message, bool* RecieveStatus) {
+
+    std::thread receiveThread(startReceiving, sock, message,RecieveStatus);
+    receiveThread.detach();
     return true;
 }
 

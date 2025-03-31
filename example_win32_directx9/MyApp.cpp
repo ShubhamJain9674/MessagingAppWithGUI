@@ -47,7 +47,8 @@ namespace MyApp {
     static int MessageFrom[10];
     static int MessageCounter = 0;
     static int RecieveMessagePadding[10];
-
+    static bool ServerReceiveThread=false;
+    static bool RecieveStatus = false;
     
     //Start Server handling:-
     static bool StartServer=false;
@@ -110,9 +111,16 @@ namespace MyApp {
                     strcpy(Sendbuffer, "");
                     
                 }
-
-                if (myServer->ReceiveMessageFromOther(&myServer->MSGsock, RecieveBuffer) && (strcmp(RecieveBuffer,"")>0) ) {
+                if (!ServerReceiveThread) {
+                    myServer->ReceiveMessageFromOther(&myServer->MSGsock, RecieveBuffer,&RecieveStatus);
+                    ServerReceiveThread = true;
+                }
+                if ( ServerReceiveThread && RecieveStatus &&(strcmp(RecieveBuffer,"")>0) ) {
                     //
+
+                    std::cout << "debug for message recieved! in myapp" << std::endl;
+                    std::cout << RecieveBuffer << std::endl;
+                    RecieveStatus = false;
                     RecieveMessagePadding[MessageCounter] = strlen(RecieveBuffer) * 7;
                     if (MessageCounter == 9) {
                         ClearSendMessageBuffer();
