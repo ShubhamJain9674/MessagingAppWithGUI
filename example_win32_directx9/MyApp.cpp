@@ -154,6 +154,11 @@ namespace MyApp {
                 }
 
             }
+            else {
+
+                ImGui::SetCursorPos(ImVec2(375, 200));
+                ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "Your Messages will Appear here");
+            }
         }
 
         ImGui::End();
@@ -229,7 +234,7 @@ namespace MyApp {
         // App code:-
         ImGui::Begin("##Test");
 
-        if(!StartServer && !ConnectionStatus){
+        if(!StartServer && !myServer->ConnectionStatus){
 
 
             ImGui::SetCursorPos(ImVec2(30, 50));
@@ -243,16 +248,29 @@ namespace MyApp {
             if (ImGui::Button("Start a Server")) {
            
                 StartServer = true;
-                myServer->StartServer();
-                myServer->Listen();
-                
+                if (myServer->StartServer()) {
+                    myServer->Listen();
+                    myServer->StartAcceptingConnections();
+                  
+                }
+                else {
+                    StartServer = false;
+                }
                 //check here
-                myServer->StartAcceptingConnections();
                   
             }
+
+            
             
         }
         else {
+
+            if (myServer->acceptFailed) {
+                StartServer = false;
+                printf("accept failed recorded!\n");
+            }
+
+
 
             if (myServer->isClientConnected) {
                 myServer->connectionType = 2;

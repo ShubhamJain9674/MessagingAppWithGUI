@@ -48,6 +48,7 @@ public:
 
     SOCKET mySocket{ INVALID_SOCKET };
     std::atomic<bool> isClientConnected = false;
+    std::atomic<bool> acceptFailed = false;
 
     std::vector<Log> Applog;
 
@@ -55,7 +56,7 @@ public:
     void log(const std::string& message,int level);
 
     //Functions to start server:-
-    void StartServer();
+    bool StartServer();
     void ServerCleanup();
     void Listen();
     bool Accept();

@@ -44,7 +44,7 @@ void Server::log(const std::string& message, int level)
     Applog.push_back({ message, level });
 }
 
-void Server::StartServer() {
+bool Server::StartServer() {
 
     /*WSADATA wsaData;
     int wsaErr;
@@ -56,7 +56,8 @@ void Server::StartServer() {
     if (wsaErr != 0) {
         std::cout << "The Winsock dll not found ! " << std::endl;
         log("The winsock dll not found !", 2);
-        return;
+        ServerCleanup();
+        return false;
     }
     else {
         std::cout << "The Winsock dll found ! " << std::endl;
@@ -74,7 +75,7 @@ void Server::StartServer() {
         std::cout << "Error at socket Creation" << WSAGetLastError() << std::endl;
         log("Error at socket Creation !", 2);
         ServerCleanup();
-        return;
+        return false;
     }
     else {
         std::cout << "socket() is ok!" << std::endl;
@@ -90,7 +91,8 @@ void Server::StartServer() {
     if (localIP.empty()) {
         std::cout << "No valid local IP address found!" << std::endl;
         log("No Valid Local IP address found !", 1);
-        return;
+        ServerCleanup();
+        return false;
     }
 
     // Convert std::string to std::wstring (wide string)
@@ -102,7 +104,7 @@ void Server::StartServer() {
         std::cout << "InetPton() failed: " << WSAGetLastError() << std::endl;
         log(std::string("InetPton failed : " + WSAGetLastError()), 2);
         ServerCleanup();
-        return;
+        return false;
     }
     service.sin_port = htons(Port);
 
@@ -111,7 +113,7 @@ void Server::StartServer() {
         log(std::string("bind failed" + WSAGetLastError()), 2);
 
         ServerCleanup();
-        return;
+        return false;
     }
     else {
         std::cout << "bind is ok!" << std::endl;
@@ -119,6 +121,7 @@ void Server::StartServer() {
 
 
     }
+    return true;
 
 }
 
@@ -128,6 +131,9 @@ void Server::ServerCleanup()
         closesocket(mySocket);
     }
     WSACleanup();
+    ConnectionStatus = false;
+    connectionType = -1;
+    ConnectedDeviceIP = "";
 
 }
 
@@ -185,7 +191,10 @@ bool Server::Accept()
 
 void Server::StartAcceptingConnections()
 {
+    acceptFailed = false;
     std::thread acceptThread([this]() {
+
+       
         while (true)
         {
             clientSocketSize = sizeof(ClientSocket);
@@ -205,6 +214,8 @@ void Server::StartAcceptingConnections()
 
                 std::cout << "accept failed: " << error << std::endl;
                 log("accept failed!", 2);
+                acceptFailed = true;
+                ServerCleanup();
                 break;  // Fatal error, break the loop
             }
 
