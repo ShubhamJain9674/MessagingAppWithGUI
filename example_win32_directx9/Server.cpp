@@ -316,6 +316,8 @@ bool Server::ConnectServer(std::string IP) {
 
         log("Client Connect is ok!", 0);
         log("Client can start sending and recieving data...", 0);
+        ConnectionStatus = true;
+        connectionType = 1;
     }
 
     //char buffer[200];
@@ -349,6 +351,7 @@ bool Server::ConnectServer(std::string IP) {
     //WSACleanup();
     u_long mode = 1;
     ioctlsocket(mySocket, FIONBIO, &mode);
+    ConnectionStatus = true;
 
     return true;
 }

@@ -36,7 +36,7 @@ namespace MyApp {
 
 
     //Cond flags for client connecting server 
-    static bool ConnectionStatus = false;
+    //static bool ConnectionStatus = false;
     static bool ShowConnectionStatus = false;
     static int ShowConnectionStatusShake = 0;
     static float LoadingPB = 0.0f;
@@ -359,8 +359,8 @@ namespace MyApp {
 
 
 
-                ConnectionStatus=(MyServer->ConnectServer(IPstr)); //using this causes loading gui to just be a gimmic and the
-                                                                        //code becomes blocking
+                //ConnectionStatus=(MyServer->ConnectServer(IPstr)); //using this causes loading gui to just be a gimmic and the
+                MyServer->ConnectServer(IPstr);                                                        //code becomes blocking
 
 
                 ShowConnectionStatus = true;
@@ -413,13 +413,13 @@ namespace MyApp {
 
 
 
-                if (ConnectionStatus) {
+                if (MyServer->ConnectionStatus) {
 
                     ImGui::SetCursorPos(ImVec2(75, 185));
                     ImGui::TextColored(ImVec4(0.0f,1.0f,0.0f,1.0f),"Connected Successfully");
                     MyServer->ConnectedDeviceIP = IPbuff;
-                    MyServer->ConnectionStatus = true;
-                    MyServer->connectionType = 1;
+                    //MyServer->ConnectionStatus = true;
+                    //MyServer->connectionType = 1;
                     *IPWin = false;
                 }
                 else {
