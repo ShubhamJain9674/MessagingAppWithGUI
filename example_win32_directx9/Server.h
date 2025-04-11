@@ -14,6 +14,9 @@ struct Log {
     int level{ 0 };
 };
 
+std::string getLocalIP();
+
+
 class Server {
 
 private:

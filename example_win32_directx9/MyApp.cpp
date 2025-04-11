@@ -229,7 +229,7 @@ namespace MyApp {
         // App code:-
         ImGui::Begin("##Test");
 
-        if(!StartServer){
+        if(!StartServer && !ConnectionStatus){
 
 
             ImGui::SetCursorPos(ImVec2(30, 50));
@@ -280,9 +280,10 @@ namespace MyApp {
             }
         }
         
-        
-
-        
+        ImGui::SetCursorPos(ImVec2(30, 20));
+        ImGui::Text("Your IP : ");
+        ImGui::SetCursorPos(ImVec2(100, 20));
+        ImGui::TextColored(ImVec4(0.0f,1.0f,0.0f,1.0f), getLocalIP().c_str());
 
 
 
