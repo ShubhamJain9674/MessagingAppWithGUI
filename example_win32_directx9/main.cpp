@@ -218,7 +218,7 @@ int main(int, char**)
         //My Code Goes here:-
 
         MyApp::TopBar(&IpWindow,&MyServer);
-        MyApp::MessageBoxWin(&IpWindow, &MyServer,DataSendbuffer,DataReceiveBuffer);
+        MyApp::MessageBoxWin(&IpWindow, &MyServer,DataSendbuffer,DataReceiveBuffer,hwnd);
         MyApp::Console(&MyServer);
         
 

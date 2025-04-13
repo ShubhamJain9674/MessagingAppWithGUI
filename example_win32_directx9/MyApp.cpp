@@ -1,6 +1,6 @@
 #include "MyApp.h"
 #include "imgui.h"
-
+#include "FileHandler.h"
 
 
 bool isValidIP(const char* ip) {
@@ -63,7 +63,7 @@ namespace MyApp {
     }
 
 
-    void MessageBoxWin(bool* IPwin,Server* myServer,char* Sendbuffer,char* RecieveBuffer) {
+    void MessageBoxWin(bool* IPwin,Server* myServer,char* Sendbuffer,char* RecieveBuffer,HWND hWnd) {
 
         
 
@@ -92,7 +92,7 @@ namespace MyApp {
 
                 //ImGui::SameLine();
                 ImGui::SetCursorPos(ImVec2(5.0f, ImGui::GetContentRegionAvail().y - 20.0f));
-                ImGui::SetKeyboardFocusHere();
+                //ImGui::SetKeyboardFocusHere();
                 ImGui::InputText("##Message", Sendbuffer,200);
 
                 ImGui::SameLine();
@@ -114,6 +114,12 @@ namespace MyApp {
                     strcpy(Sendbuffer, "");
                     
                 }
+                ImGui::SameLine();
+                if (ImGui::Button(" + ")) {
+
+                    std::string ChosenFile = ShowFilePicker(hWnd);
+                }
+
                 if (!ServerReceiveThread) {
                     myServer->ReceiveMessageFromOther(&myServer->MSGsock, RecieveBuffer,&RecieveStatus);
                     ServerReceiveThread = true;

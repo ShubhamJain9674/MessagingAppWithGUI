@@ -40,6 +40,9 @@
     <ClCompile Include="Server.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="FileHandler.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\imconfig.h">
@@ -61,6 +64,9 @@
       <Filter>sources</Filter>
     </ClInclude>
     <ClInclude Include="Server.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="FileHandler.h">
       <Filter>sources</Filter>
     </ClInclude>
   </ItemGroup>
