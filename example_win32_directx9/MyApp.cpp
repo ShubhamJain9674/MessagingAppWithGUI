@@ -87,13 +87,16 @@ namespace MyApp {
                     }
                 }
 
-                ImGui::SetCursorPos(ImVec2(10,480));
-                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f),"Enter your message : ");
+                //ImGui::SetCursorPos(ImVec2(10,ImGui::GetContentRegionAvail().y-20.0f));
+                //ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f),"Enter your message : ");
 
-                ImGui::SetCursorPos(ImVec2(10, 500));
+                //ImGui::SameLine();
+                ImGui::SetCursorPos(ImVec2(5.0f, ImGui::GetContentRegionAvail().y - 20.0f));
+                ImGui::SetKeyboardFocusHere();
                 ImGui::InputText("##Message", Sendbuffer,200);
 
-                ImGui::SetCursorPos(ImVec2(850, 500));
+                ImGui::SameLine();
+                //ImGui::SetCursorPos(ImVec2(850, 500));
                 if ((ImGui::Button("Send") || ImGui::IsKeyPressed(ImGuiKey_Enter)) && Sendbuffer[0]!='\0') {
                     ImGui::SetNextItemWidth(400);
 
@@ -146,7 +149,9 @@ namespace MyApp {
                         MessagePosY += 30;
                     }
                     else if(MessageFrom[i] == 1) {
-                        ImGui::SetCursorPos(ImVec2(RecieveMessagePosX-RecieveMessagePadding[i], MessagePosY));
+                        RecieveMessagePosX = ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize(MessageBuffer[i]).x- ImGui::CalcTextSize(myServer->ConnectedDeviceIP.c_str()).x;
+
+                        ImGui::SetCursorPos(ImVec2(RecieveMessagePosX-5.0f, MessagePosY));
                         ImGui::TextColored(ImVec4(0.419f, 0.8117f, 0.878f, 1.0f), "%s : %s",myServer->ConnectedDeviceIP.c_str(), MessageBuffer[i]);
                         MessagePosY += 30;
 
@@ -156,7 +161,7 @@ namespace MyApp {
             }
             else {
 
-                ImGui::SetCursorPos(ImVec2(375, 200));
+                ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/2 - 60.0f,ImGui::GetWindowSize().y/2 ));
                 ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f), "Your Messages will Appear here");
             }
         }
@@ -236,16 +241,30 @@ namespace MyApp {
 
         if(!StartServer && !myServer->ConnectionStatus){
 
+            ImGui::SetCursorPos(ImVec2(20, 40));
+            ImGui::Text("Your IP : ");
+            ImGui::SetCursorPos(ImVec2(90, 40));
 
-            ImGui::SetCursorPos(ImVec2(30, 50));
-            if (ImGui::Button("Connect To device")) {
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), getLocalIP().c_str());
+
+            ImGui::SetCursorPos(ImVec2(20, 70));
+            ImGui::Text("Port : ");
+            ImGui::SameLine();
+            if (ImGui::InputInt("##port", &myServer->Port)) {
+                if (myServer->Port < 49152) myServer->Port = 49152;
+                if (myServer->Port > 65535) myServer->Port = 65535;
+            }
+
+
+            ImGui::SetCursorPos(ImVec2(20, 110));
+            if (ImGui::Button("Connect To device",ImVec2(ImGui::GetContentRegionAvail().x,25.0f))) {
             
 
                 *IpWin = true;
             }
 
-            ImGui::SetCursorPos(ImVec2(170, 50));
-            if (ImGui::Button("Start a Server")) {
+            ImGui::SetCursorPos(ImVec2(20, 140));
+            if (ImGui::Button("Start a Server",ImVec2(ImGui::GetContentRegionAvail().x,25.0f))) {
            
                 StartServer = true;
                 if (myServer->StartServer()) {
@@ -260,6 +279,15 @@ namespace MyApp {
                   
             }
 
+            
+            //ImGui::SameLine();
+            ImGui::SetCursorPos(ImVec2(20, 170));
+            if (ImGui::Button("Reset",ImVec2(ImGui::GetContentRegionAvail().x, 25.0f))) {
+                myServer->Port = 55555;
+            }
+
+            
+            
             
             
         }
@@ -281,9 +309,14 @@ namespace MyApp {
 
             if (myServer->ConnectionStatus) {
 
-                ImGui::SetCursorPos(ImVec2(10, 90));
+                ImGui::SetCursorPos(ImVec2(20, 40));
+                ImGui::Text("Your IP : ");
+                ImGui::SetCursorPos(ImVec2(90, 40));
+                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), getLocalIP().c_str());
+
+                ImGui::SetCursorPos(ImVec2(20, 70));
                 ImGui::Text("Connected Device IP : ");
-                ImGui::SetCursorPos(ImVec2(10, 110));
+                ImGui::SameLine();
 
                 ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), myServer->ConnectedDeviceIP.c_str());
 
@@ -292,16 +325,18 @@ namespace MyApp {
 
             }
             else {
-                ImGui::SetCursorPos(ImVec2(50,50));
+                ImGui::SetCursorPos(ImVec2(20, 40));
+                ImGui::Text("Your IP : ");
+                ImGui::SetCursorPos(ImVec2(90, 40));
+                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), getLocalIP().c_str());
+
+                ImGui::SetCursorPos(ImVec2(20,70));
                 ImGui::Text("Waiting for Connections");
 
             }
         }
         
-        ImGui::SetCursorPos(ImVec2(30, 20));
-        ImGui::Text("Your IP : ");
-        ImGui::SetCursorPos(ImVec2(100, 20));
-        ImGui::TextColored(ImVec4(0.0f,1.0f,0.0f,1.0f), getLocalIP().c_str());
+        
 
 
 

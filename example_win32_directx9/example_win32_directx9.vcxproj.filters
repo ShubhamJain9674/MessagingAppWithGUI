@@ -73,4 +73,12 @@
       <Filter>imgui</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Font Include="OpenSans-Regular.ttf">
+      <Filter>sources</Filter>
+    </Font>
+    <Font Include="NotoColorEmoji-Regular.ttf">
+      <Filter>sources</Filter>
+    </Font>
+  </ItemGroup>
 </Project>
