@@ -9,12 +9,31 @@
 #include <chrono>
 #include <vector>
 
+#define DT_Message 1
+#define DT_BinaryFile 2
+#define DT_endFlag 3
+
+
 struct Log {
     std::string message;
     int level{ 0 };
 };
 
 std::string getLocalIP();
+
+
+struct DataPacket {
+
+    std::string SenderName = "";
+    std::string FileName = "";
+    int DataType = -1;
+    int DataSize = 0;
+    int PacketID = -1;
+    int totalPackets = -1;
+    std::vector<char> Data;
+    std::string CheckSum = "";
+
+};
 
 
 class Server {
@@ -27,6 +46,8 @@ private:
     int wsaErr;
 
     WORD wVersionRequested = MAKEWORD(2, 2);
+
+    DataPacket CreateMessageDataPacket(std::string Message);
 
 
 public:

@@ -363,7 +363,7 @@ namespace MyApp {
         ImGui::Text("Enter IP Address of the host device");
 
 
-        ImGui::SetCursorPos(ImVec2(50, 120));
+        ImGui::SetCursorPos(ImVec2(50, 130));
         ImGui::InputText("##Ip",IPbuff,30);
 
         int xOffset = (rand() % 2 == 0) ? -(rand() % 6 + 5) : (rand() % 6 + 5);  // X shake range: -10 to +10
@@ -382,7 +382,7 @@ namespace MyApp {
             ImGui::TextColored(ImVec4(1.0f,0.0f,0.0f,100.0f),"Enter a valid IP");
         }
 
-        ImGui::SetCursorPos(ImVec2(90, 150));
+        ImGui::SetCursorPos(ImVec2(90, 170));
         if (ImGui::Button("Submit") || ImGui::IsKeyPressed(ImGuiKey_Enter)) {
             if (isValidIP(IPbuff)) {
 
@@ -425,7 +425,7 @@ namespace MyApp {
 
         }
 
-        ImGui::SetCursorPos(ImVec2(160, 150));
+        ImGui::SetCursorPos(ImVec2(160, 170));
         if (ImGui::Button("Close") || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             *IPWin = false;
             showError = false;

@@ -3,6 +3,79 @@
 
 
 
+std::vector<char> SerializeDataPacket(const DataPacket& DPack) {
+
+    std::vector<char> buffer;
+
+    // Serialize SenderName (null-terminated string)
+    buffer.insert(buffer.end(), DPack.SenderName.begin(), DPack.SenderName.end());
+    buffer.push_back('\0');  // Null terminator
+
+    // Serialize FileName (null-terminated string)
+    buffer.insert(buffer.end(), DPack.FileName.begin(), DPack.FileName.end());
+    buffer.push_back('\0');  // Null terminator
+
+    // Serialize integer fields (DataType, DataSize, PacketID, totalPackets)
+    buffer.push_back(static_cast<char>(DPack.DataType)); // Serialize DataType
+    buffer.push_back(static_cast<char>(DPack.DataSize)); // Serialize DataSize
+    buffer.push_back(static_cast<char>(DPack.PacketID)); // Serialize PacketID
+    buffer.push_back(static_cast<char>(DPack.totalPackets)); // Serialize totalPackets
+
+    // Serialize Data (message or file data)
+    buffer.insert(buffer.end(), DPack.Data.begin(), DPack.Data.end());
+
+    return buffer;  // Return the serialized byte buffer
+}
+
+DataPacket DeserializeDataPacket(const std::vector<char>& buffer) {
+    DataPacket DPack;
+    size_t index = 0;
+
+    // Deserialize SenderName (until null terminator)
+    while (buffer[index] != '\0') {
+        DPack.SenderName.push_back(buffer[index]);
+        index++;
+    }
+    index++;  // Skip null terminator
+
+    // Deserialize FileName (until null terminator)
+    while (buffer[index] != '\0') {
+        DPack.FileName.push_back(buffer[index]);
+        index++;
+    }
+    index++;  // Skip null terminator
+
+    // Deserialize integer fields (DataType, DataSize, PacketID, totalPackets)
+    DPack.DataType = static_cast<int>(buffer[index++]);
+    DPack.DataSize = static_cast<int>(buffer[index++]);
+    DPack.PacketID = static_cast<int>(buffer[index++]);
+    DPack.totalPackets = static_cast<int>(buffer[index++]);
+
+    // Deserialize Data (message or file data)
+    while (index < buffer.size()) {
+        DPack.Data.push_back(buffer[index++]);
+    }
+
+    return DPack;  // Return the deserialized DataPacket
+}
+
+
+
+DataPacket Server::CreateMessageDataPacket(std::string Message) {
+
+    DataPacket DPack;
+    DPack.SenderName = localIP;
+    DPack.DataType = DT_Message;
+    DPack.DataSize = Message.size();
+
+    DPack.Data = std::vector<char>(Message.begin(), Message.end());
+    DPack.Data.push_back('\0');
+
+    return DPack;
+
+}
+
+
 std::string getLocalIP() {
     // Initialize Windows sockets
     WSADATA wsaData;
@@ -370,8 +443,11 @@ bool Server::SendMessageToOther(SOCKET* sock ,char* message)
     printf("Enter your message : ");
     std::cin.getline(buffer, 200);*/
 
-
-    int byteCount = send((*sock), message, 200, 0); //can change size of byte send later
+    DataPacket DPack= CreateMessageDataPacket(message);
+    
+    
+    std::vector<char> serializedData = SerializeDataPacket(DPack);
+    int byteCount = send((*sock), serializedData.data(), serializedData.size(), 0); //can change size of byte send later
 
 
     if (byteCount == SOCKET_ERROR) {
@@ -397,45 +473,75 @@ bool Server::SendMessageToOther(SOCKET* sock ,char* message)
 void startReceiving(SOCKET* sock, char* message,bool* status,Server* MyServer) {
 
     while (true) {
-        char receiveBuffer[200] = { 0 };
-        int byteCount = recv((*sock), receiveBuffer, sizeof(receiveBuffer) - 1, 0);
+        std::vector<char> receiveBuffer(512);
+
+        int byteCount = recv((*sock), receiveBuffer.data(),receiveBuffer.size(), 0);
         //std::cout << "check for if recv is blocking" << std::endl;
         
-
+        
         if (byteCount > 0) {
             // Ensure null termination
-            receiveBuffer[byteCount] = '\0';
+            receiveBuffer.resize(byteCount);
+            try {
 
-            // Copy only if message is within bounds
-            if (byteCount < static_cast<int>(sizeof(receiveBuffer))) {
-                strcpy_s(message, 200, receiveBuffer);
-                std::cout << "Received message: " << receiveBuffer << std::endl;
-                MyServer->log(std::string("Received Message : ") + receiveBuffer, 0);
+                DataPacket DPack = DeserializeDataPacket(receiveBuffer);
 
-                 *status=true;
+                // Copy only if message is within bounds
+                if (DPack.DataSize < byteCount && DPack.DataType == DT_Message) {
+
+                    std::string receivedMessage(DPack.Data.begin(), DPack.Data.end());
+
+                    memcpy(message,receivedMessage.c_str(),DPack.DataSize);
+                    /*strcpy_s(message, 200, receiveBuffer);*/
+                    message[DPack.DataSize] = '\0';
+
+                    std::cout << "Received message: " << message << std::endl;
+
+
+                    MyServer->log(std::string("Received Message : ") + message, 0);
+
+                    *status = true;
+
+    
+                    
+
+
+
+
+
+
+
+                }
+                else {
+                    std::cerr << "Message too long to handle." << std::endl;
+                    MyServer->log("Message too long to handle.", 1);
+                    *status = false;
+                }
+
             }
-            else {
-                std::cerr << "Message too long to handle." << std::endl;
-                MyServer->log("Message too long to handle.", 1);
-                *status=false;
+            catch (const std::exception& e) {
+                std::cerr << "Error during deserialization: " << e.what() << std::endl;
+                MyServer->log("Deserialization Error", 2);
+                *status = false;
             }
         }
         else if (byteCount == 0) {
-            std::cout << "Client Disconnected!" << std::endl;
-            MyServer->log("Client Disconnected!", 1);
-            *status=false;
-            break;
-        }
-        else {
-            int err = WSAGetLastError();
-            if (err != WSAEWOULDBLOCK) {
-                printf("Receive error: %d\n", err);
-                MyServer->log("Receive Error : " + err,2);
+                std::cout << "Client Disconnected!" << std::endl;
+                MyServer->log("Client Disconnected!", 1);
                 *status=false;
                 break;
             }
-        }
+            else {
+                int err = WSAGetLastError();
+                if (err != WSAEWOULDBLOCK) {
+                    printf("Receive error: %d\n", err);
+                    MyServer->log("Receive Error : " + err,2);
+                    *status=false;
+                    break;
+                }
+            }
 
+        
         
         Sleep(500);
     }
