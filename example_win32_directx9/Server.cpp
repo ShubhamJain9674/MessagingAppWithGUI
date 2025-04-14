@@ -4,60 +4,70 @@
 
 
 std::vector<char> SerializeDataPacket(const DataPacket& DPack) {
-
     std::vector<char> buffer;
 
     // Serialize SenderName (null-terminated string)
     buffer.insert(buffer.end(), DPack.SenderName.begin(), DPack.SenderName.end());
-    buffer.push_back('\0');  // Null terminator
+    buffer.push_back('\0');
 
     // Serialize FileName (null-terminated string)
     buffer.insert(buffer.end(), DPack.FileName.begin(), DPack.FileName.end());
-    buffer.push_back('\0');  // Null terminator
+    buffer.push_back('\0');
 
-    // Serialize integer fields (DataType, DataSize, PacketID, totalPackets)
-    buffer.push_back(static_cast<char>(DPack.DataType)); // Serialize DataType
-    buffer.push_back(static_cast<char>(DPack.DataSize)); // Serialize DataSize
-    buffer.push_back(static_cast<char>(DPack.PacketID)); // Serialize PacketID
-    buffer.push_back(static_cast<char>(DPack.totalPackets)); // Serialize totalPackets
+    // Serialize integer fields (4 bytes each)
+    auto writeInt = [&](int value) {
+        char* p = reinterpret_cast<char*>(&value);
+        buffer.insert(buffer.end(), p, p + sizeof(int));
+        };
 
-    // Serialize Data (message or file data)
+    writeInt(DPack.DataType);
+    writeInt(DPack.DataSize);
+    writeInt(DPack.PacketID);
+    writeInt(DPack.totalPackets);
+
+    // Serialize Data
     buffer.insert(buffer.end(), DPack.Data.begin(), DPack.Data.end());
 
-    return buffer;  // Return the serialized byte buffer
+    return buffer;
 }
 
 DataPacket DeserializeDataPacket(const std::vector<char>& buffer) {
     DataPacket DPack;
     size_t index = 0;
 
-    // Deserialize SenderName (until null terminator)
+    // Deserialize SenderName
     while (buffer[index] != '\0') {
-        DPack.SenderName.push_back(buffer[index]);
-        index++;
+        DPack.SenderName.push_back(buffer[index++]);
     }
-    index++;  // Skip null terminator
+    index++; // skip null terminator
 
-    // Deserialize FileName (until null terminator)
+    // Deserialize FileName
     while (buffer[index] != '\0') {
-        DPack.FileName.push_back(buffer[index]);
-        index++;
+        DPack.FileName.push_back(buffer[index++]);
     }
-    index++;  // Skip null terminator
+    index++; // skip null terminator
 
-    // Deserialize integer fields (DataType, DataSize, PacketID, totalPackets)
-    DPack.DataType = static_cast<int>(buffer[index++]);
-    DPack.DataSize = static_cast<int>(buffer[index++]);
-    DPack.PacketID = static_cast<int>(buffer[index++]);
-    DPack.totalPackets = static_cast<int>(buffer[index++]);
+    auto readInt = [&](int& out) {
+        out = *reinterpret_cast<const int*>(&buffer[index]);
+        index += sizeof(int);
+        };
 
-    // Deserialize Data (message or file data)
-    while (index < buffer.size()) {
-        DPack.Data.push_back(buffer[index++]);
+    readInt(DPack.DataType);
+    readInt(DPack.DataSize);
+    readInt(DPack.PacketID);
+    readInt(DPack.totalPackets);
+
+    // Deserialize Data
+    if (DPack.DataSize > 0 && index + DPack.DataSize <= buffer.size()) {
+        DPack.Data.assign(buffer.begin() + index, buffer.begin() + index + DPack.DataSize);
+    }
+    else {
+        DPack.Data.clear(); // fallback
     }
 
-    return DPack;  // Return the deserialized DataPacket
+    return DPack;
 }
+
 
 std::string GetFileNameFromPath(const std::string& filepath) {
     size_t pos = filepath.find_last_of("/\\");
@@ -93,12 +103,55 @@ DataPacket Server::GetHeaderDataPacket(std::string filepath) {
     file.close();
 
     DPack.DataSize = static_cast<int>(size);
-    DPack.PacketID = 0;
+    DPack.PacketID = -1;
     DPack.totalPackets = (size + MaxPacketDataSize - 1) / MaxPacketDataSize;
 
     return DPack;
 }
 
+DataPacket Server::GetNextFilePacket(std::string filepath, int PacketID) {
+
+    DataPacket DPack;
+    DPack.SenderName = localIP;
+    DPack.FileName = GetFileNameFromPath(filepath);
+    DPack.DataType = DT_BinaryFile;
+
+    /*DPack.DataSize = MaxPacketDataSize;*/
+    DPack.PacketID = PacketID;
+    DPack.totalPackets = 1;
+    DPack.CheckSum = "";
+
+    std::ifstream file(filepath, std::ios::binary);
+    if (!file) {
+        std::cerr << "Failed to open file: " << filepath << std::endl;
+        return DPack; // Return empty/invalid packet if file can't be opened
+    }
+
+    std::streampos offset = static_cast<std::streampos>(PacketID) * MaxPacketDataSize;
+    file.seekg(offset);
+    if (file.eof()) {
+        std::cerr << "Reached end of file or invalid PacketID: " << PacketID << std::endl;
+        return DPack;
+    }
+
+    std::vector<char> buffer(MaxPacketDataSize);
+    file.read(buffer.data(), MaxPacketDataSize);
+
+    DPack.Data.assign(buffer.begin(), buffer.end()); // assuming DPack.Data is std::string
+    DPack.PacketID = PacketID ;
+
+    std::cout << "packet id : " << PacketID << std::endl;
+    std::cout << "Data : " << DPack.Data.data() << std::endl;
+
+    std::streamsize bytesRead = file.gcount();
+    DPack.Data.assign(buffer.begin(), buffer.begin() + bytesRead);
+    DPack.DataSize = static_cast<int>(bytesRead);
+
+
+    return DPack;
+
+
+}
 
 
 std::string getLocalIP() {
@@ -515,20 +568,44 @@ bool Server::SendFileToOther(SOCKET* sock, std::string filepath) {
         printf("Server sent %ld bytes \n", byteCount);
     }
 
+    DataPacket FileDataPacket;
+    for (int i = 0; i < HeaderDataPacket.totalPackets; i++) {
+
+        FileDataPacket=GetNextFilePacket(filepath,i);
+        serializedData = SerializeDataPacket(FileDataPacket);
+        int byteCount = send((*sock), serializedData.data(), serializedData.size(), 0);
+
+        if (byteCount == SOCKET_ERROR) {
+            printf("Server send error %ld.\n", WSAGetLastError());
+
+            closesocket(*sock);
+            WSACleanup();
+            return false;
+        }
+
+        else {
+            printf("Server sent %ld bytes \n", byteCount);
+        }
+
+        Sleep(500);
+
+
+    }
+
     return true;
 }
 
 
 
-void startReceiving(SOCKET* sock, char* message,bool* status,Server* MyServer) {
+void startReceiving(SOCKET* sock, char* message, bool* status, Server* MyServer) {
 
     while (true) {
         std::vector<char> receiveBuffer(512);
 
-        int byteCount = recv((*sock), receiveBuffer.data(),receiveBuffer.size(), 0);
+        int byteCount = recv((*sock), receiveBuffer.data(), receiveBuffer.size(), 0);
         //std::cout << "check for if recv is blocking" << std::endl;
-        
-        
+
+
         if (byteCount > 0) {
             // Ensure null termination
             receiveBuffer.resize(byteCount);
@@ -537,47 +614,108 @@ void startReceiving(SOCKET* sock, char* message,bool* status,Server* MyServer) {
                 DataPacket DPack = DeserializeDataPacket(receiveBuffer);
 
                 // Copy only if message is within bounds
-                if (DPack.DataSize <= 256) {
+                if (DPack.DataSize <= 1024) {
 
                     switch (DPack.DataType) {
 
-                        case DT_Message:
-                        {
+                    case DT_Message:
+                    {
 
 
-                            std::string receivedMessage(DPack.Data.begin(), DPack.Data.end());
+                        std::string receivedMessage(DPack.Data.begin(), DPack.Data.end());
 
-                            memcpy(message,receivedMessage.c_str(),DPack.DataSize);
-                            /*strcpy_s(message, 200, receiveBuffer);*/
-                            message[DPack.DataSize] = '\0';
+                        memcpy(message, receivedMessage.c_str(), DPack.DataSize);
+                        /*strcpy_s(message, 200, receiveBuffer);*/
+                        message[DPack.DataSize] = '\0';
 
-                            std::cout << "Received message: " << message << std::endl;
+                        std::cout << "Received message: " << message << std::endl;
 
 
-                            MyServer->log(std::string("Received Message : ") + message, 0);
+                        MyServer->log(std::string("Received Message : ") + message, 0);
 
-                            *status = true;
+                        *status = true;
 
-                            break;
+                        break;
+                    }
+                    case DT_FileHeader:
+                    {
+
+                        std::cout << "received header file!" << std::endl;
+                        std::cout << "Sender name : " << DPack.SenderName << std::endl;
+                        std::cout << "FileName : " << DPack.FileName << std::endl;
+                        std::cout << "Data type : " << DPack.DataType << std::endl;
+                        std::cout << "Data size : " << DPack.DataSize << std::endl;
+                        std::cout << "Packet ID : " << DPack.PacketID << std::endl;
+                        std::cout << "TotalNumberOfPackets : " << DPack.totalPackets << std::endl;
+
+                        MyServer->ReceivingFileHeader = DPack;
+
+
+
+                        break;
+                    }
+                    case DT_BinaryFile:
+                    {
+                        if (MyServer->ReceivingFileHeader.DataType != -1) {
+
+                            if (true) {
+
+
+
+
+                                std::cout << "Received data Packet : " << DPack.PacketID << std::endl;
+                                std::cout << "data : " << DPack.Data.data() << std::endl;
+                                std::cout << "data size : " << DPack.DataSize << std::endl;
+
+                                std::string fileName = MyServer->ReceivingFileHeader.FileName;
+                                std::string folderPath = "ReceivedFiles";
+                                std::string fullPath = folderPath + "\\" + fileName;
+
+                                // Create folder if it doesn't exist
+                                struct stat info;
+                                if (stat(folderPath.c_str(), &info) != 0) {
+                                    _mkdir(folderPath.c_str()); // Windows version
+                                }
+
+                                std::fstream outFile(fullPath, std::ios::in | std::ios::out | std::ios::binary);
+
+                                // If file doesn't exist yet, create and open it
+                                if (!outFile) {
+                                    outFile.open(fullPath, std::ios::out | std::ios::binary); // create
+                                    outFile.close();
+                                    outFile.open(fullPath, std::ios::in | std::ios::out | std::ios::binary);
+                                }
+
+                                if (!outFile) {
+                                    std::cerr << "Failed to open or create file: " << fullPath << std::endl;
+                                    break;
+                                }
+
+                                // Calculate offset and write packet data at correct position
+                                std::streampos offset = static_cast<std::streampos>(DPack.PacketID) * (MyServer->MaxPacketDataSize);
+                                outFile.seekp(offset);
+                                outFile.write(DPack.Data.data(), DPack.DataSize);
+                                outFile.close();
+
+                                //std::cout << "Packet " << DPack.PacketID << " written to " << fullPath << std::endl;
+
+                                
+
+                                
+                            }
                         }
-                        case DT_FileHeader:
-
-                            std::cout << "received header file!" << std::endl;
-                            std::cout << "Sender name : " <<  DPack.SenderName << std::endl;
-                            std::cout << "FileName : " << DPack.FileName << std::endl;
-                            std::cout << "Data type : " << DPack.DataType << std::endl;
-                            std::cout << "Data size : " << DPack.DataSize << std::endl;
-                            std::cout << "Packet ID : " << DPack.PacketID << std::endl;
-                            std::cout << "TotalNumberOfPackets : " << DPack.totalPackets << std::endl;
+                        break;
+                    }
 
 
-                            break;
+
+
 
 
                     }
 
-    
-                    
+
+
 
 
 
@@ -600,26 +738,26 @@ void startReceiving(SOCKET* sock, char* message,bool* status,Server* MyServer) {
             }
         }
         else if (byteCount == 0) {
-                std::cout << "Client Disconnected!" << std::endl;
-                MyServer->log("Client Disconnected!", 1);
-                *status=false;
+            std::cout << "Client Disconnected!" << std::endl;
+            MyServer->log("Client Disconnected!", 1);
+            *status = false;
+            break;
+        }
+        else {
+            int err = WSAGetLastError();
+            if (err != WSAEWOULDBLOCK) {
+                printf("Receive error: %d\n", err);
+                MyServer->log("Receive Error : " + err, 2);
+                *status = false;
                 break;
             }
-            else {
-                int err = WSAGetLastError();
-                if (err != WSAEWOULDBLOCK) {
-                    printf("Receive error: %d\n", err);
-                    MyServer->log("Receive Error : " + err,2);
-                    *status=false;
-                    break;
-                }
-            }
+        }
 
-        
-        
+
+
         Sleep(500);
     }
-    
+
 }
 
 

@@ -9,6 +9,8 @@
 #include <chrono>
 #include <vector>
 #include <fstream>
+#include <direct.h> // for _mkdir on Windows
+#include <sys/stat.h>
 
 #define DT_Message 1
 #define DT_BinaryFile 2
@@ -51,13 +53,14 @@ private:
 
     DataPacket CreateMessageDataPacket(std::string Message);
     DataPacket GetHeaderDataPacket(std::string filepath);
-    
+    DataPacket GetNextFilePacket(std::string filepath,int PacketID);
 
 
-    int MaxPacketDataSize = 256;
+
 
 public:
 
+    int MaxPacketDataSize = 256;
     
     
     SOCKET acceptSocket;
@@ -105,5 +108,7 @@ public:
     //1 - client , 2 -server
     int connectionType = -1;
     SOCKET MSGsock=INVALID_SOCKET;
+
+    DataPacket ReceivingFileHeader;
 };
 
