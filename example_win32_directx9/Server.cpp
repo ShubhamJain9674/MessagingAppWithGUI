@@ -59,7 +59,12 @@ DataPacket DeserializeDataPacket(const std::vector<char>& buffer) {
     return DPack;  // Return the deserialized DataPacket
 }
 
-
+std::string GetFileNameFromPath(const std::string& filepath) {
+    size_t pos = filepath.find_last_of("/\\");
+    if (pos != std::string::npos)
+        return filepath.substr(pos + 1);
+    return filepath; // If no slash, whole string is filename
+}
 
 DataPacket Server::CreateMessageDataPacket(std::string Message) {
 
@@ -74,6 +79,26 @@ DataPacket Server::CreateMessageDataPacket(std::string Message) {
     return DPack;
 
 }
+
+
+DataPacket Server::GetHeaderDataPacket(std::string filepath) {
+
+    DataPacket DPack;
+    DPack.SenderName = localIP;
+    DPack.FileName = GetFileNameFromPath(filepath);
+    DPack.DataType = DT_FileHeader;
+
+    std::ifstream file(filepath, std::ios::binary | std::ios::ate);
+    std::streamsize size = file.tellg();
+    file.close();
+
+    DPack.DataSize = static_cast<int>(size);
+    DPack.PacketID = 0;
+    DPack.totalPackets = (size + MaxPacketDataSize - 1) / MaxPacketDataSize;
+
+    return DPack;
+}
+
 
 
 std::string getLocalIP() {
@@ -469,6 +494,31 @@ bool Server::SendMessageToOther(SOCKET* sock ,char* message)
 }
 
 
+bool Server::SendFileToOther(SOCKET* sock, std::string filepath) {
+
+    //code for sending First Header file:-
+
+    DataPacket HeaderDataPacket = GetHeaderDataPacket(filepath);
+    std::vector<char> serializedData = SerializeDataPacket(HeaderDataPacket);
+
+    int byteCount = send((*sock), serializedData.data(), serializedData.size(), 0);
+
+    if (byteCount == SOCKET_ERROR) {
+        printf("Server send error %ld.\n", WSAGetLastError());
+
+        closesocket(*sock);
+        WSACleanup();
+        return false;
+    }
+
+    else {
+        printf("Server sent %ld bytes \n", byteCount);
+    }
+
+    return true;
+}
+
+
 
 void startReceiving(SOCKET* sock, char* message,bool* status,Server* MyServer) {
 
@@ -487,20 +537,44 @@ void startReceiving(SOCKET* sock, char* message,bool* status,Server* MyServer) {
                 DataPacket DPack = DeserializeDataPacket(receiveBuffer);
 
                 // Copy only if message is within bounds
-                if (DPack.DataSize < byteCount && DPack.DataType == DT_Message) {
+                if (DPack.DataSize <= 256) {
 
-                    std::string receivedMessage(DPack.Data.begin(), DPack.Data.end());
+                    switch (DPack.DataType) {
 
-                    memcpy(message,receivedMessage.c_str(),DPack.DataSize);
-                    /*strcpy_s(message, 200, receiveBuffer);*/
-                    message[DPack.DataSize] = '\0';
-
-                    std::cout << "Received message: " << message << std::endl;
+                        case DT_Message:
+                        {
 
 
-                    MyServer->log(std::string("Received Message : ") + message, 0);
+                            std::string receivedMessage(DPack.Data.begin(), DPack.Data.end());
 
-                    *status = true;
+                            memcpy(message,receivedMessage.c_str(),DPack.DataSize);
+                            /*strcpy_s(message, 200, receiveBuffer);*/
+                            message[DPack.DataSize] = '\0';
+
+                            std::cout << "Received message: " << message << std::endl;
+
+
+                            MyServer->log(std::string("Received Message : ") + message, 0);
+
+                            *status = true;
+
+                            break;
+                        }
+                        case DT_FileHeader:
+
+                            std::cout << "received header file!" << std::endl;
+                            std::cout << "Sender name : " <<  DPack.SenderName << std::endl;
+                            std::cout << "FileName : " << DPack.FileName << std::endl;
+                            std::cout << "Data type : " << DPack.DataType << std::endl;
+                            std::cout << "Data size : " << DPack.DataSize << std::endl;
+                            std::cout << "Packet ID : " << DPack.PacketID << std::endl;
+                            std::cout << "TotalNumberOfPackets : " << DPack.totalPackets << std::endl;
+
+
+                            break;
+
+
+                    }
 
     
                     

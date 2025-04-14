@@ -118,6 +118,8 @@ namespace MyApp {
                 if (ImGui::Button(" + ")) {
 
                     std::string ChosenFile = ShowFilePicker(hWnd);
+                    myServer->SendFileToOther(&myServer->MSGsock, ChosenFile);
+
                 }
 
                 if (!ServerReceiveThread) {

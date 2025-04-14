@@ -8,10 +8,12 @@
 #include <thread>
 #include <chrono>
 #include <vector>
+#include <fstream>
 
 #define DT_Message 1
 #define DT_BinaryFile 2
 #define DT_endFlag 3
+#define DT_FileHeader 4
 
 
 struct Log {
@@ -48,7 +50,11 @@ private:
     WORD wVersionRequested = MAKEWORD(2, 2);
 
     DataPacket CreateMessageDataPacket(std::string Message);
+    DataPacket GetHeaderDataPacket(std::string filepath);
+    
 
+
+    int MaxPacketDataSize = 256;
 
 public:
 
@@ -91,6 +97,8 @@ public:
     void ClientCleanup();
     bool SendMessageToOther(SOCKET* sock,char* message);
     bool ReceiveMessageFromOther(SOCKET* sock, char* message,bool* RecieveStatus);
+    bool SendFileToOther(SOCKET* sock, std::string filepath);
+
     void StartAcceptingConnections();
 
 
