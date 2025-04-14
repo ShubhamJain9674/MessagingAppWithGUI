@@ -3,6 +3,8 @@
 
 
 
+
+
 std::vector<char> SerializeDataPacket(const DataPacket& DPack) {
     std::vector<char> buffer;
 
@@ -69,7 +71,7 @@ DataPacket DeserializeDataPacket(const std::vector<char>& buffer) {
 }
 
 
-std::string GetFileNameFromPath(const std::string& filepath) {
+std::string Server::GetFileNameFromPath(const std::string& filepath) {
     size_t pos = filepath.find_last_of("/\\");
     if (pos != std::string::npos)
         return filepath.substr(pos + 1);
@@ -152,6 +154,10 @@ DataPacket Server::GetNextFilePacket(std::string filepath, int PacketID) {
 
 
 }
+
+
+
+
 
 
 std::string getLocalIP() {
@@ -300,26 +306,7 @@ void Server::Listen()
         log("listen(): is ok ,waiting for connections...", 0);
     }
 }
-/*
-bool Server::Accept()
-{
-    u_long mode = 1;
-    ioctlsocket(mySocket, FIONBIO, &mode);
-    clientSocketSize = sizeof(ClientSocket);
-    acceptSocket = accept(mySocket, (SOCKADDR*)&ClientSocket, &clientSocketSize);
 
-    if (acceptSocket == INVALID_SOCKET) {
-        std::cout << "accept failed:" << WSAGetLastError() << std::endl;
-        return false;
-    }
-
-    inet_ntop(AF_INET, &(ClientSocket.sin_addr), ClientIP, INET_ADDRSTRLEN);
-    std::cout << "Client IP Address : " << ClientIP << std::endl;
-
-  
-    return true;
-}
-*/
 
 bool Server::Accept()
 {
@@ -515,11 +502,7 @@ void Server::ClientCleanup()
 
 bool Server::SendMessageToOther(SOCKET* sock ,char* message)
 {
-    /*char buffer[200];
-    std::cin.ignore();
-
-    printf("Enter your message : ");
-    std::cin.getline(buffer, 200);*/
+   
 
     DataPacket DPack= CreateMessageDataPacket(message);
     
@@ -568,9 +551,15 @@ void SendFile(SOCKET* sock, std::string filepath,Server* myServer) {
     }
 
     DataPacket FileDataPacket;
+    myServer->fileSize += HeaderDataPacket.DataSize;
+
     for (int i = 0; i < HeaderDataPacket.totalPackets; i++) {
 
         FileDataPacket=myServer->GetNextFilePacket(filepath,i);
+        myServer->sentProgress = static_cast<float>(i)/ (HeaderDataPacket.totalPackets-1);
+        myServer->DataTransferred += FileDataPacket.DataSize;
+
+
         serializedData = SerializeDataPacket(FileDataPacket);
         int byteCount = send((*sock), serializedData.data(), serializedData.size(), 0);
 
@@ -585,11 +574,17 @@ void SendFile(SOCKET* sock, std::string filepath,Server* myServer) {
             printf("Server sent %ld bytes \n", byteCount);
         }
 
-        Sleep(500);
+        Sleep(2000);
 
 
     }
 
+    myServer->SendingFile = false;
+    myServer->sendingFileName = "";
+    float sentProgress = 0.0f;
+    int DataTransferred = 0;
+    int fileSize = 0;
+    
 }
 
 bool Server::SendFileToOther(SOCKET* sock, std::string filepath) {
@@ -603,7 +598,7 @@ bool Server::SendFileToOther(SOCKET* sock, std::string filepath) {
 void startReceiving(SOCKET* sock, char* message, bool* status, Server* MyServer) {
 
     while (true) {
-        std::vector<char> receiveBuffer(3 * 1024 * 1024);
+        std::vector<char> receiveBuffer(RBuffAmount);
 
         int byteCount = recv((*sock), receiveBuffer.data(), receiveBuffer.size(), 0);
         //std::cout << "check for if recv is blocking" << std::endl;
@@ -611,14 +606,14 @@ void startReceiving(SOCKET* sock, char* message, bool* status, Server* MyServer)
 
         if (byteCount > 0) {
             // Ensure null termination
-            receiveBuffer.resize(byteCount);
+            receiveBuffer.resize(RBuffAmount);
             try {
 
                 DataPacket DPack = DeserializeDataPacket(receiveBuffer);
 
                 // Copy only if message is within bounds
-                std::cout << "Dpack Datasize " <<DPack.DataSize<< std::endl;
-                if (DPack.DataSize>0) {
+                std::cout << "Dpack Datasize " << DPack.DataSize << std::endl;
+                if (DPack.DataSize > 0) {
 
                     switch (DPack.DataType) {
 
@@ -654,8 +649,9 @@ void startReceiving(SOCKET* sock, char* message, bool* status, Server* MyServer)
 
                         MyServer->ReceivingFileHeader = DPack;
 
-
-
+                        MyServer->DataTransferred = 0;
+                        MyServer->fileSize = DPack.DataSize;
+                        MyServer->ReceivingFile = true;
                         break;
                     }
                     case DT_BinaryFile:
@@ -665,7 +661,8 @@ void startReceiving(SOCKET* sock, char* message, bool* status, Server* MyServer)
                             if (true) {
 
 
-
+                                MyServer->DataTransferred += DPack.DataSize;
+                                MyServer->sentProgress =static_cast<float>( MyServer->DataTransferred) / MyServer->fileSize;
 
                                 std::cout << "Received data Packet : " << DPack.PacketID << std::endl;
                                 std::cout << "data : " << DPack.Data.data() << std::endl;
@@ -703,34 +700,27 @@ void startReceiving(SOCKET* sock, char* message, bool* status, Server* MyServer)
 
                                 //std::cout << "Packet " << DPack.PacketID << " written to " << fullPath << std::endl;
 
-                                
 
-                                
+                                if (DPack.PacketID == MyServer->ReceivingFileHeader.totalPackets - 1) {
+                                    MyServer->ReceivingFile = false;
+                                    MyServer->sendingFileName = "";
+                                    float sentProgress = 0.0f;
+                                    int DataTransferred = 0;
+                                    int fileSize = 0;
+                                }
+
                             }
                         }
                         break;
                     }
 
 
-
-
-
-
                     }
-
-
-
-
-
-
-
-
-
 
                 }
                 else {
-                    std::cerr << "Message too long to handle." << std::endl;
-                    MyServer->log("Message too long to handle.", 1);
+                    std::cerr << "Message Corrupted." << std::endl;
+                    MyServer->log("Message Corrupted.", 1);
                     *status = false;
                 }
 

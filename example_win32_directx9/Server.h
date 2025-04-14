@@ -17,6 +17,8 @@
 #define DT_endFlag 3
 #define DT_FileHeader 4
 
+#define RBuffAmount 3 * 1024 * 1024
+
 
 struct Log {
     std::string message;
@@ -107,14 +109,22 @@ public:
     DataPacket CreateMessageDataPacket(std::string Message);
     DataPacket GetHeaderDataPacket(std::string filepath);
     DataPacket GetNextFilePacket(std::string filepath, int PacketID);
+    
 
+    std::string GetFileNameFromPath(const std::string& filepath);
+
+    bool SendingFile{ false };
+    bool ReceivingFile{ false };
+    std::string sendingFileName;
+    float sentProgress = 0.0f;
+    int DataTransferred = 0;
+    int fileSize = 0;
 
     //1 - client , 2 -server
     int connectionType = -1;
     SOCKET MSGsock=INVALID_SOCKET;
 
     DataPacket ReceivingFileHeader;
-
     
 };
 

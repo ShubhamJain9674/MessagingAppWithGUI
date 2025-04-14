@@ -114,13 +114,54 @@ namespace MyApp {
                     strcpy(Sendbuffer, "");
                     
                 }
+                
+
+
                 ImGui::SameLine();
-                if (ImGui::Button(" + ")) {
+                
+                if (!myServer->SendingFile && !myServer->ReceivingFile && ImGui::Button(" + ")) {
 
                     std::string ChosenFile = ShowFilePicker(hWnd);
                     myServer->SendFileToOther(&myServer->MSGsock, ChosenFile);
+                    myServer->SendingFile = true;
+                    myServer->sendingFileName = myServer->GetFileNameFromPath(ChosenFile);
+                }
+                
+                if (myServer->SendingFile) {
+
+                    ImGui::SetCursorPos(ImVec2(10, 430));
+                    ImGui::Text("Sending File : ");
+                    ImGui::SetCursorPos(ImVec2(100, 435));
+                    ImGui::Text(myServer->sendingFileName.c_str());
+                    ImGui::SameLine();
+
+                    std::string progress = std::to_string(myServer->DataTransferred/1000) + "/" + std::to_string(myServer->fileSize/1000);
+
+                    ImGui::ProgressBar(myServer->sentProgress, ImVec2(180.0f, 20.0f),progress.c_str());
+                }
+                if (myServer->ReceivingFile) {
+
+
+                    std::string progress = std::to_string(myServer->DataTransferred / 1000) + "/" + std::to_string(myServer->fileSize / 1000);
+
+                    ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/2+30.0f, 430));
+                    ImGui::Text("Receiving File : ");
+                    ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x / 2 + 130.0f, 430));
+                    ImGui::Text(myServer->ReceivingFileHeader.FileName.c_str());
+             
+                    //ImGui::SetCursorPosX(ImGui::GetWindowSize().x-200.0f);
+                    ImGui::SameLine();
+
+                    ImGui::ProgressBar(myServer->sentProgress, ImVec2(180.0f, 20.0f), progress.c_str());
+
+                    
+
+              
 
                 }
+                
+
+
 
                 if (!ServerReceiveThread) {
                     myServer->ReceiveMessageFromOther(&myServer->MSGsock, RecieveBuffer,&RecieveStatus);
@@ -367,11 +408,11 @@ namespace MyApp {
         ImGui::Begin("GetIp",NULL,ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
         ImGui::PopStyleColor();
 
-        ImGui::SetCursorPos(ImVec2(30, 100));
+        ImGui::SetCursorPos(ImVec2(30, 80));
         ImGui::Text("Enter IP Address of the host device");
 
 
-        ImGui::SetCursorPos(ImVec2(50, 130));
+        ImGui::SetCursorPos(ImVec2(50, 110));
         ImGui::InputText("##Ip",IPbuff,30);
 
         int xOffset = (rand() % 2 == 0) ? -(rand() % 6 + 5) : (rand() % 6 + 5);  // X shake range: -10 to +10
@@ -390,7 +431,7 @@ namespace MyApp {
             ImGui::TextColored(ImVec4(1.0f,0.0f,0.0f,100.0f),"Enter a valid IP");
         }
 
-        ImGui::SetCursorPos(ImVec2(90, 170));
+        ImGui::SetCursorPos(ImVec2(90, 145));
         if (ImGui::Button("Submit") || ImGui::IsKeyPressed(ImGuiKey_Enter)) {
             if (isValidIP(IPbuff)) {
 
@@ -433,7 +474,7 @@ namespace MyApp {
 
         }
 
-        ImGui::SetCursorPos(ImVec2(160, 170));
+        ImGui::SetCursorPos(ImVec2(160, 145));
         if (ImGui::Button("Close") || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             *IPWin = false;
             showError = false;
