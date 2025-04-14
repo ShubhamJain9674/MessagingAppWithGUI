@@ -547,11 +547,11 @@ bool Server::SendMessageToOther(SOCKET* sock ,char* message)
 }
 
 
-bool Server::SendFileToOther(SOCKET* sock, std::string filepath) {
+void SendFile(SOCKET* sock, std::string filepath,Server* myServer) {
 
     //code for sending First Header file:-
 
-    DataPacket HeaderDataPacket = GetHeaderDataPacket(filepath);
+    DataPacket HeaderDataPacket = myServer->GetHeaderDataPacket(filepath);
     std::vector<char> serializedData = SerializeDataPacket(HeaderDataPacket);
 
     int byteCount = send((*sock), serializedData.data(), serializedData.size(), 0);
@@ -561,7 +561,6 @@ bool Server::SendFileToOther(SOCKET* sock, std::string filepath) {
 
         closesocket(*sock);
         WSACleanup();
-        return false;
     }
 
     else {
@@ -571,7 +570,7 @@ bool Server::SendFileToOther(SOCKET* sock, std::string filepath) {
     DataPacket FileDataPacket;
     for (int i = 0; i < HeaderDataPacket.totalPackets; i++) {
 
-        FileDataPacket=GetNextFilePacket(filepath,i);
+        FileDataPacket=myServer->GetNextFilePacket(filepath,i);
         serializedData = SerializeDataPacket(FileDataPacket);
         int byteCount = send((*sock), serializedData.data(), serializedData.size(), 0);
 
@@ -580,7 +579,6 @@ bool Server::SendFileToOther(SOCKET* sock, std::string filepath) {
 
             closesocket(*sock);
             WSACleanup();
-            return false;
         }
 
         else {
@@ -592,15 +590,20 @@ bool Server::SendFileToOther(SOCKET* sock, std::string filepath) {
 
     }
 
-    return true;
 }
 
+bool Server::SendFileToOther(SOCKET* sock, std::string filepath) {
+
+    std::thread SendFileThread(SendFile, sock, filepath,this);
+    SendFileThread.detach();
+    return true;
+}
 
 
 void startReceiving(SOCKET* sock, char* message, bool* status, Server* MyServer) {
 
     while (true) {
-        std::vector<char> receiveBuffer(512);
+        std::vector<char> receiveBuffer(3 * 1024 * 1024);
 
         int byteCount = recv((*sock), receiveBuffer.data(), receiveBuffer.size(), 0);
         //std::cout << "check for if recv is blocking" << std::endl;
@@ -614,7 +617,8 @@ void startReceiving(SOCKET* sock, char* message, bool* status, Server* MyServer)
                 DataPacket DPack = DeserializeDataPacket(receiveBuffer);
 
                 // Copy only if message is within bounds
-                if (DPack.DataSize <= 1024) {
+                std::cout << "Dpack Datasize " <<DPack.DataSize<< std::endl;
+                if (DPack.DataSize>0) {
 
                     switch (DPack.DataType) {
 

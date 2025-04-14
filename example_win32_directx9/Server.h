@@ -51,16 +51,15 @@ private:
 
     WORD wVersionRequested = MAKEWORD(2, 2);
 
-    DataPacket CreateMessageDataPacket(std::string Message);
-    DataPacket GetHeaderDataPacket(std::string filepath);
-    DataPacket GetNextFilePacket(std::string filepath,int PacketID);
+    
 
+    
 
 
 
 public:
 
-    int MaxPacketDataSize = 256;
+    int MaxPacketDataSize = 1024*1024; //1kB
     
     
     SOCKET acceptSocket;
@@ -91,7 +90,7 @@ public:
     void Listen();
     bool Accept();
     void CloseServer();
-
+    
 
 
     //Client Function code:-
@@ -101,8 +100,13 @@ public:
     bool SendMessageToOther(SOCKET* sock,char* message);
     bool ReceiveMessageFromOther(SOCKET* sock, char* message,bool* RecieveStatus);
     bool SendFileToOther(SOCKET* sock, std::string filepath);
-
+    
     void StartAcceptingConnections();
+
+    //file sharing
+    DataPacket CreateMessageDataPacket(std::string Message);
+    DataPacket GetHeaderDataPacket(std::string filepath);
+    DataPacket GetNextFilePacket(std::string filepath, int PacketID);
 
 
     //1 - client , 2 -server
@@ -110,5 +114,7 @@ public:
     SOCKET MSGsock=INVALID_SOCKET;
 
     DataPacket ReceivingFileHeader;
+
+    
 };
 
