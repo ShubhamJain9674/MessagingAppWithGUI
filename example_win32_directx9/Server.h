@@ -11,13 +11,16 @@
 #include <fstream>
 #include <direct.h> // for _mkdir on Windows
 #include <sys/stat.h>
+#include <mutex>
 
-#define DT_Message 1
-#define DT_BinaryFile 2
-#define DT_endFlag 3
-#define DT_FileHeader 4
 
-#define RBuffAmount 3 * 1024 * 1024
+
+#define DT_Message      1
+#define DT_BinaryFile   2
+#define DT_endFlag      3
+#define DT_FileHeader   4
+
+#define RBuffAmount     3 * 1024 * 1024
 
 
 struct Log {
@@ -30,50 +33,42 @@ std::string getLocalIP();
 
 struct DataPacket {
 
-    std::string SenderName = "";
-    std::string FileName = "";
+    char SenderName[100] = "";
+    char FileName[100] = "";
     int DataType = -1;
     int DataSize = 0;
     int PacketID = -1;
     int totalPackets = -1;
-    std::vector<char> Data;
-    std::string CheckSum = "";
+    char Data[1024*1024];
+    char CheckSum[100] = "";
 
 };
+
+
 
 
 class Server {
 
 private:
 
-    
     std::string localIP;
     WSADATA wsaData;
-    int wsaErr;
+    int wsaErr{ -1 };
 
     WORD wVersionRequested = MAKEWORD(2, 2);
 
-    
-
-    
-
-
-
 public:
 
-    int MaxPacketDataSize = 1024*1024; //1kB
-    
-    
+    std::mutex sendMutex;
+    int MaxPacketDataSize = 1024*1024; 
+
     SOCKET acceptSocket;
     sockaddr_in ClientSocket;
     int clientSocketSize;
     char ClientIP[INET_ADDRSTRLEN];
 
-
     int Port = 55555;
 
-
-    
     std::string ConnectedDeviceIP = "";
     bool ConnectionStatus{ false };
 
@@ -106,9 +101,9 @@ public:
     void StartAcceptingConnections();
 
     //file sharing
-    DataPacket CreateMessageDataPacket(std::string Message);
-    DataPacket GetHeaderDataPacket(std::string filepath);
-    DataPacket GetNextFilePacket(std::string filepath, int PacketID);
+    DataPacket* CreateMessageDataPacket(std::string Message);
+    DataPacket* GetHeaderDataPacket(std::string filepath);
+    DataPacket* GetNextFilePacket(std::string filepath, int PacketID);
     
 
     std::string GetFileNameFromPath(const std::string& filepath);
@@ -124,7 +119,7 @@ public:
     int connectionType = -1;
     SOCKET MSGsock=INVALID_SOCKET;
 
-    DataPacket ReceivingFileHeader;
+    DataPacket* ReceivingFileHeader=nullptr;
     
 };
 

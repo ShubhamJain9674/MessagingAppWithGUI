@@ -147,7 +147,10 @@ namespace MyApp {
                     ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/2+30.0f, 430));
                     ImGui::Text("Receiving File : ");
                     ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x / 2 + 130.0f, 430));
-                    ImGui::Text(myServer->ReceivingFileHeader.FileName.c_str());
+                    if (myServer->ReceivingFileHeader != nullptr) {
+
+                        ImGui::Text(myServer->ReceivingFileHeader->FileName);
+                    }
              
                     //ImGui::SetCursorPosX(ImGui::GetWindowSize().x-200.0f);
                     ImGui::SameLine();
